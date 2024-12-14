@@ -19,7 +19,10 @@ impl Robot {
 }
 
 enum Quadrant {
-    TopLeft, TopRight, BottomLeft, BottomRight,
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
 }
 
 struct Bathroom {
@@ -109,16 +112,21 @@ impl Bathroom {
 
         None
     }
-    
-    // I found the pattern by looking for long strings of "#####" 
+
+    // I found the pattern by looking for long strings of "#####"
     // Then I wrote this to find it without false positives :)
     fn has_pattern(&self) -> bool {
-        let mut lines: Vec<String> = (0..self.height).map(|_| (0..self.width).map(|_| '.').collect()).collect();
+        let mut lines: Vec<String> = (0..self.height)
+            .map(|_| (0..self.width).map(|_| '.').collect())
+            .collect();
         for robot in &self.robots {
-            lines[robot.pos.1 as usize].replace_range(robot.pos.0 as usize..=robot.pos.0 as usize, "#");
+            lines[robot.pos.1 as usize]
+                .replace_range(robot.pos.0 as usize..=robot.pos.0 as usize, "#");
         }
-        
-        lines.iter().any(|line| line.contains("#....#####################....#"))
+
+        lines
+            .iter()
+            .any(|line| line.contains("#....#####################....#"))
     }
 }
 
@@ -137,9 +145,9 @@ pub fn part_two(input: &str) -> Option<u32> {
 
     for i in 0..10_000 {
         bathroom.advance();
-        
+
         if bathroom.has_pattern() {
-            return Some(i + 1)
+            return Some(i + 1);
         }
     }
 
