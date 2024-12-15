@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 advent_of_code::solution!(15);
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -27,13 +29,25 @@ impl Direction {
             Direction::Down => (position.0, position.1 + 1),
         }
     }
+
+    fn decrement(&self, position: &(usize, usize)) -> (usize, usize) {
+        match self {
+            Direction::Right => (position.0 - 1, position.1),
+            Direction::Left => (position.0 + 1, position.1),
+            Direction::Up => (position.0, position.1 + 1),
+            Direction::Down => (position.0, position.1 - 1),
+        }
+    }
+
+    fn horizontal(&self) -> bool {
+        self == &Direction::Right || self == &Direction::Left
+    }
 }
 
 struct Warehouse {
     data: Vec<Vec<char>>,
     robot: (usize, usize),
     sequence: Vec<Direction>,
-    temp: String,
 }
 
 impl Warehouse {
@@ -65,7 +79,6 @@ impl Warehouse {
             data,
             robot,
             sequence: sequence.chars().map(|c| Direction::from_char(c)).collect(),
-            temp: String::new(),
         }
     }
 
@@ -101,7 +114,6 @@ impl Warehouse {
         let temp = *self.get(first);
         self.data[first.1][first.0] = self.data[second.1][second.0];
         self.data[second.1][second.0] = temp;
-        self.temp = format!("{}", self);
     }
 
     fn robot_move(&mut self, to: (usize, usize)) {
@@ -124,6 +136,101 @@ impl Warehouse {
         false
     }
 
+    fn check_vertical_collision(
+        &self,
+        boxes: &HashSet<(usize, usize)>,
+        from: usize,
+        to: usize,
+    ) -> Result<Vec<(usize, usize)>, ()> {
+        let mut next_boxes: Vec<(usize, usize)> = Vec::new();
+
+        for x in boxes.iter().filter(|&b| b.1 == from) {
+            let above1 = self.get((x.0, to));
+            let above2 = self.get((x.0 + 1, to));
+
+            if above1 == &'#' || above2 == &'#' {
+                return Err(());
+            }
+
+            if above1 == &'[' {
+                next_boxes.push((x.0, to));
+            } else if above1 == &']' {
+                next_boxes.push((x.0 - 1, to));
+            }
+            if above2 == &'[' {
+                next_boxes.push((x.0 + 1, to));
+            }
+        }
+
+        Ok(next_boxes.iter().map(|&b| b).collect())
+    }
+
+    fn push_p2(&mut self, index: (usize, usize), direction: &Direction) -> bool {
+        if direction.horizontal() {
+            let mut swap_position = direction.increment(&index);
+            while self.get(swap_position) == &'[' || self.get(swap_position) == &']' {
+                swap_position = direction.increment(&swap_position);
+            }
+
+            if self.get(swap_position) != &'#' {
+                while swap_position != index {
+                    let back = direction.decrement(&swap_position);
+                    self.swap(swap_position, back);
+                    swap_position = back;
+                }
+                return true;
+            }
+        } else {
+            let mut boxes: HashSet<(usize, usize)> = HashSet::new();
+            boxes.insert((
+                if self.get(index) == &'[' {
+                    index.0
+                } else {
+                    index.0 - 1
+                },
+                index.1,
+            ));
+
+            let mut seek_position = index;
+            while seek_position.1 < self.data.len() {
+                if direction == &Direction::Up && seek_position.1 == 0 {
+                    panic!("Loop is in wall!");
+                }
+                let next_seek = direction.increment(&seek_position);
+                if let Ok(new_boxes) =
+                    self.check_vertical_collision(&boxes, seek_position.1, next_seek.1)
+                {
+                    if new_boxes.iter().len() == 0 {
+                        break;
+                    }
+                    boxes.extend(new_boxes);
+                } else {
+                    return false;
+                }
+                seek_position = next_seek;
+            }
+
+            // Perform the swaps necessary
+            let mut box_vec: Vec<(usize, usize)> = boxes.into_iter().collect();
+            box_vec.sort_by(|a, b| {
+                if direction == &Direction::Up {
+                    a.1.cmp(&b.1)
+                } else {
+                    b.1.cmp(&a.1)
+                }
+            });
+            for &box_pos in &box_vec {
+                let above = direction.increment(&box_pos);
+                self.swap(box_pos, above);
+                self.swap((box_pos.0 + 1, box_pos.1), (above.0 + 1, above.1));
+            }
+
+            return true;
+        }
+
+        false
+    }
+
     fn sum_boxes(&self) -> u32 {
         let mut sum = 0;
 
@@ -139,16 +246,17 @@ impl Warehouse {
     }
 }
 
-impl std::fmt::Display for Warehouse {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let s: String = self
-            .data
-            .iter()
-            .map(|line| line.iter().collect::<String>() + "\n")
-            .collect();
-        write!(f, "{}", s)
-    }
-}
+// This was for debugging
+// impl std::fmt::Display for Warehouse {
+//     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+//         let s: String = self
+//             .data
+//             .iter()
+//             .map(|line| line.iter().collect::<String>() + "\n")
+//             .collect();
+//         write!(f, "{}", s)
+//     }
+// }
 
 pub fn part_one(input: &str) -> Option<u32> {
     let mut warehouse = Warehouse::new(input);
@@ -172,7 +280,25 @@ pub fn part_one(input: &str) -> Option<u32> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    None
+    let mut warehouse = Warehouse::new(input);
+    warehouse.double();
+    let sequence = warehouse.sequence.clone();
+
+    for next in sequence.iter() {
+        let next_position = next.increment(&warehouse.robot);
+
+        match warehouse.get(next_position) {
+            '#' => continue,
+            '[' | ']' => {
+                if warehouse.push_p2(next_position, next) {
+                    warehouse.robot_move(next_position);
+                }
+            }
+            _ => warehouse.robot_move(next_position),
+        }
+    }
+
+    Some(warehouse.sum_boxes())
 }
 
 #[cfg(test)]
@@ -188,6 +314,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(9021));
     }
 }
