@@ -2,6 +2,7 @@ use std::collections::{HashMap, VecDeque};
 
 advent_of_code::solution!(24);
 
+#[derive(Clone)]
 struct Connection {
     a: String,
     b: String,
@@ -63,10 +64,10 @@ fn parse_input(input: &str) -> (HashMap<String, bool>, Vec<Connection>) {
     (state, connections)
 }
 
-fn parse_output(state: &HashMap<String, bool>) -> u64 {
+fn parse_number(state: &HashMap<String, bool>, prefix: char) -> u64 {
     let mut result = 0;
 
-    for (k, _) in state.iter().filter(|(k, v)| k.starts_with('z') && **v) {
+    for (k, _) in state.iter().filter(|(k, v)| k.starts_with(prefix) && **v) {
         let bit_index = k[1..].parse::<u32>().unwrap();
         result += 1 << bit_index;
     }
@@ -87,10 +88,48 @@ pub fn part_one(input: &str) -> Option<u64> {
         connection.operate(&mut state);
     }
 
-    Some(parse_output(&state))
+    Some(parse_number(&state, 'z'))
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
+    let (mut state, connections) = parse_input(input);
+
+    let target = parse_number(&state, 'x') + parse_number(&state, 'y');
+
+    // This was easiest to work out by hand :)
+    // Todo: clean this up and get it working programmatically after Christmas.
+    let mut connections_copy = connections.clone();
+    for connection in connections_copy.iter_mut() {
+        match connection.output.as_str() {
+            "z18" => connection.output = "qgd".to_string(),
+            "qgd" => connection.output = "z18".to_string(),
+            "z10" => connection.output = "mwk".to_string(),
+            "mwk" => connection.output = "z10".to_string(),
+            "z33" => connection.output = "gqp".to_string(),
+            "gqp" => connection.output = "z33".to_string(),
+            "hsw" => connection.output = "jmh".to_string(),
+            "jmh" => connection.output = "hsw".to_string(),
+            _ => {},
+        }
+    }
+
+    let mut queue = VecDeque::from(connections_copy);
+    while let Some(connection) = queue.pop_front() {
+        if !state.contains_key(&connection.a) || !state.contains_key(&connection.b) {
+            queue.push_back(connection);
+            continue;
+        }
+
+        connection.operate(&mut state);
+    }
+
+    let output = parse_number(&state, 'z');
+    println!("{:b}", target);
+    println!("{:b}", output);
+    if output == target {
+        println!("Success!");
+    }
+
     None
 }
 
