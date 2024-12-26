@@ -1,42 +1,30 @@
+use itertools::Itertools;
 use std::collections::HashMap;
 
 advent_of_code::solution!(1);
 
-fn parse_input(input: &str, left: &mut Vec<i32>, right: &mut Vec<i32>) {
-    let lines: Vec<&str> = input
-        .split('\n')
-        .filter(|line| !line.trim().is_empty())
-        .collect();
-    
-    for line in lines {
-        let tokens: Vec<&str> = line
-            .trim()
-            .split(' ')
-            .filter(|token| !token.trim().is_empty())
-            .collect();
-
-        if tokens.len() != 2 {
-            panic!("Error parsing tokens from input: {}", line);
-        }
-
-        left.push(tokens[0].parse().unwrap());
-        right.push(tokens[1].parse().unwrap());
-    }
+fn parse_input(input: &str) -> Vec<(&str, &str)> {
+    input
+        .lines()
+        .filter_map(|l| l.trim().split_whitespace().collect_tuple())
+        .collect()
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
     let mut left: Vec<i32> = Vec::new();
     let mut right: Vec<i32> = Vec::new();
 
-    parse_input(input, &mut left, &mut right);
+    for (l, r) in parse_input(input) {
+        left.push(l.parse::<i32>().unwrap());
+        right.push(r.parse::<i32>().unwrap());
+    }
 
     left.sort();
     right.sort();
 
     let mut answer: u32 = 0;
-    let it = left.iter().zip(right.iter());
-    for (_, (l, r)) in it.enumerate() {
-        answer += (l - r).abs() as u32;
+    for i in 0..left.len() {
+        answer += (left[i] - right[i]).abs() as u32;
     }
 
     Some(answer)
@@ -44,15 +32,13 @@ pub fn part_one(input: &str) -> Option<u32> {
 
 pub fn part_two(input: &str) -> Option<u32> {
     let mut left: Vec<i32> = Vec::new();
-    let mut right: Vec<i32> = Vec::new();
-
-    parse_input(input, &mut left, &mut right);
-    
     let mut right_hashmap: HashMap<i32, u32> = HashMap::new();
-    for num in right {
-        *right_hashmap.entry(num).or_insert(0) += 1;
+
+    for (l, r) in parse_input(input) {
+        left.push(l.parse::<i32>().unwrap());
+        *right_hashmap.entry(r.parse::<i32>().unwrap()).or_insert(0) += 1;
     }
-    
+
     let mut answer: u32 = 0;
     for num in left {
         match right_hashmap.get(&num) {
@@ -60,7 +46,7 @@ pub fn part_two(input: &str) -> Option<u32> {
             None => {}
         }
     }
-    
+
     Some(answer)
 }
 
