@@ -8,65 +8,53 @@ fn parse_line(line: &str) -> Vec<i32> {
         .collect::<Vec<i32>>()
 }
 
-fn evaluate_levels(nums: &Vec<i32>) -> bool {
-    let mut safe = true;
+fn evaluate_levels(nums: &[i32]) -> Option<usize> {
     let direction = nums[1] - nums[0];
-    for i in 0..nums.len()-1 {
-        let difference = nums[i+1] - nums[i];
+    for i in 0..nums.len() - 1 {
+        let difference = nums[i + 1] - nums[i];
         if difference.abs() < 1 || difference.abs() > 3 || difference * direction < 0 {
-            safe = false;
+            return Some(i + 1);
         }
     }
-    safe
+    None
+}
+
+fn evaluate_levels_minus_one(nums: &Vec<i32>) -> bool {
+    if let Some(i) = evaluate_levels(nums) {
+        let mut vec_copy = nums.clone();
+        vec_copy.remove(i);
+        return evaluate_levels(&vec_copy) == None;
+    }
+
+    true
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
-    let mut safe_count: u32 = 0;
+    let mut safe_count = 0;
 
     for line in input.lines() {
-        if line.trim().is_empty() {
-            continue;
-        }
-        
         let nums = parse_line(line);
-        if nums.len() < 2 {
-            panic!("Insufficient numbers found in line: '{}'", line);
-        }
-        
-        if evaluate_levels(&nums) {
-            safe_count += 1;
+        if evaluate_levels(&nums) == None {
+            safe_count += 1
         }
     }
-
+    
     Some(safe_count)
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    let mut safe_count: u32 = 0;
+    let mut safe_count = 0;
 
     for line in input.lines() {
-        if line.trim().is_empty() {
-            continue;
-        }
-
-        let nums = parse_line(line);if nums.len() < 2 {
-            panic!("Insufficient numbers found in line: '{}'", line);
-        }
-        
-        if evaluate_levels(&nums) {
+        let nums = parse_line(line);
+    
+        if evaluate_levels_minus_one(&nums) {
             safe_count += 1;
-        } else {
-            for i in 0..nums.len() {
-                let mut vec_modified = nums.clone();
-                vec_modified.remove(i);
-                if evaluate_levels(&vec_modified) {
-                    safe_count += 1;
-                    break;
-                }
-            }
+        } else if evaluate_levels_minus_one(&nums.iter().rev().copied().collect()) {
+            safe_count += 1;
         }
     }
-
+    
     Some(safe_count)
 }
 
