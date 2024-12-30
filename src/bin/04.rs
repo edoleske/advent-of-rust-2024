@@ -1,82 +1,81 @@
 advent_of_code::solution!(4);
 
-fn count_xmas(data: &Vec<Vec<char>>, x: usize, y: usize, width: usize) -> u32 {
-    let mut substrings: Vec<String> = Vec::new();
+fn check_diagonal(data: &Vec<Vec<char>>, x: usize, y: usize, dx: i32, dy: i32) -> bool {
+    let first = data[(y as i32 + dy * 1) as usize][(x as i32 + dx * 1) as usize];
+    let second = data[(y as i32 + dy * 2) as usize][(x as i32 + dx * 2) as usize];
+    let third = data[(y as i32 + dy * 3) as usize][(x as i32 + dx * 3) as usize];
+    first == 'M' && second == 'A' && third == 'S'
+}
 
-    if x < width - 3 {
-        substrings.push(data[y][x..=x+3].iter().collect::<String>());
+fn count_xmas(data: &Vec<Vec<char>>, x: usize, y: usize, width: usize) -> u32 {
+    let mut count = 0;
+
+    if x < width - 3 && data[y][x + 1] == 'M' && data[y][x + 2] == 'A' && data[y][x + 3] == 'S' {
+        count += 1;
     }
-    if x > 2 {
-        substrings.push(data[y][x-3..=x].iter().rev().collect::<String>());
+    if x > 2 && data[y][x - 1] == 'M' && data[y][x - 2] == 'A' && data[y][x - 3] == 'S' {
+        count += 1;
     }
-    if y < data.len() - 3 {
-        substrings.push(data[y..=y+3].iter().map(|line| line[x]).collect::<String>());
+    if y < data.len() - 3 && data[y + 1][x] == 'M' && data[y + 2][x] == 'A' && data[y + 3][x] == 'S'
+    {
+        count += 1;
     }
-    if y > 2 {
-        substrings.push(data[y - 3..=y].iter().rev().map(|line| line[x]).collect::<String>());
+    if y > 2 && data[y - 1][x] == 'M' && data[y - 2][x] == 'A' && data[y - 3][x] == 'S' {
+        count += 1;
     }
     if x < width - 3 && y > 2 {
-        let mut substring: String = String::default();
-        for i in 0..4 {
-            substring.push(data[y-i][x+i]);
+        if check_diagonal(data, x, y, 1, -1) {
+            count += 1;
         }
-        substrings.push(substring);
     }
     if x < width - 3 && y < data.len() - 3 {
-        let mut substring: String = String::default();
-        for i in 0..4 {
-            substring.push(data[y+i][x+i]);
+        if check_diagonal(data, x, y, 1, 1) {
+            count += 1;
         }
-        substrings.push(substring);
     }
     if x > 2 && y > 2 {
-        let mut substring: String = String::default();
-        for i in 0..4 {
-            substring.push(data[y-i][x-i]);
+        if check_diagonal(data, x, y, -1, -1) {
+            count += 1;
         }
-        substrings.push(substring);
     }
     if x > 2 && y < data.len() - 3 {
-        let mut substring: String = String::default();
-        for i in 0..4 {
-            substring.push(data[y+i][x-i]);
+        if check_diagonal(data, x, y, -1, 1) {
+            count += 1;
         }
-        substrings.push(substring);
     }
 
-    substrings.iter().filter(|&s| s == "XMAS").count() as u32
+    count
 }
 
 fn count_cross_mas(data: &Vec<Vec<char>>, x: usize, y: usize, width: usize) -> u32 {
     if x < 1 || y < 1 || x > width - 2 || y > data.len() - 2 {
         return 0;
     }
-    
-    let tl = data[y-1][x-1];
-    let tr = data[y-1][x+1];
-    let bl = data[y+1][x-1];
-    let br = data[y+1][x+1];
-    
-    if (tl == 'M' && tr == 'M' && bl == 'S' && br == 'S') ||
-        (tl == 'M' && tr == 'S' && bl == 'M' && br == 'S') ||
-        (tl == 'S' && tr == 'S' && bl == 'M' && br == 'M') ||
-        (tl == 'S' && tr == 'M' && bl == 'S' && br == 'M') {
+
+    let tl = data[y - 1][x - 1];
+    let tr = data[y - 1][x + 1];
+    let bl = data[y + 1][x - 1];
+    let br = data[y + 1][x + 1];
+
+    if (tl == 'M' && tr == 'M' && bl == 'S' && br == 'S')
+        || (tl == 'M' && tr == 'S' && bl == 'M' && br == 'S')
+        || (tl == 'S' && tr == 'S' && bl == 'M' && br == 'M')
+        || (tl == 'S' && tr == 'M' && bl == 'S' && br == 'M')
+    {
         return 1;
     }
-    
+
     0
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
     let mut total: u32 = 0;
 
-    let data: Vec<Vec<char>> = input.lines().map(|line| line.trim().chars().collect()).collect();
-
-    // Assert input is even grid
+    let data: Vec<Vec<char>> = input
+        .lines()
+        .map(|line| line.trim().chars().collect())
+        .collect();
     let width = data[0].len();
-    if !data.iter().all(|line| line.len() == width) {
-        panic!("Input is uneven");
-    }
 
     for y in 0..data.len() {
         for x in 0..width {
@@ -92,13 +91,11 @@ pub fn part_one(input: &str) -> Option<u32> {
 pub fn part_two(input: &str) -> Option<u32> {
     let mut total: u32 = 0;
 
-    let data: Vec<Vec<char>> = input.lines().map(|line| line.trim().chars().collect()).collect();
-
-    // Assert input is even grid
+    let data: Vec<Vec<char>> = input
+        .lines()
+        .map(|line| line.trim().chars().collect())
+        .collect();
     let width = data[0].len();
-    if !data.iter().all(|line| line.len() == width) {
-        panic!("Input is uneven");
-    }
 
     for y in 0..data.len() {
         for x in 0..width {
