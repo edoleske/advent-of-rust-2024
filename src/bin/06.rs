@@ -67,7 +67,7 @@ fn parse_input(input: &str) -> Map {
     }
 }
 
-fn count_visited(map: &Map) -> u32 {
+fn count_visited(map: &Map) -> Option<HashSet<(i32, i32)>> {
     let mut visited: HashSet<(i32, i32, Direction)> = HashSet::new();
     let mut iter = 0;
 
@@ -92,29 +92,32 @@ fn count_visited(map: &Map) -> u32 {
 
         // Infinite loop detected
         if visited.contains(&(next_position.0, next_position.1, direction)) {
-            return map.max();
+            return None;
         }
 
         // Max iterations as fallback
         iter += 1;
         if iter > map.max() {
-            return map.max();
+            return None;
         }
 
         position = next_position;
     }
 
-    visited
+    Some(visited
         .iter()
         .map(|v| (v.0, v.1))
-        .collect::<HashSet<_>>()
-        .len() as u32
+        .collect::<HashSet<_>>())
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
     let map = parse_input(input);
 
-    Some(count_visited(&map))
+    if let Some(visited) = count_visited(&map) {
+        return Some(visited.len() as u32);
+    }
+    
+    Some(0)
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
@@ -122,16 +125,11 @@ pub fn part_two(input: &str) -> Option<u32> {
     let mut map = parse_input(input);
     let obstacles = map.obstacles.clone();
 
-    for j in 0..map.height {
-        for i in 0..map.width {
-            let position = (i as i32, j as i32);
-            if map.obstacles.contains(&position) && map.start_position == position {
-                continue;
-            }
-
+    if let Some(robot_visited) = count_visited(&map) {
+        for position in robot_visited {
             map.obstacles.push(position);
             let count = count_visited(&map);
-            if count == map.max() {
+            if count == None {
                 result += 1;
             }
             map.obstacles = obstacles.clone();
